@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+
+
+from common import jailer_home, run_report_status, Jail
+import argparse
+from subprocess import run
+from os.path import isdir, isfile
+from os import getenv
+
+parser = argparse.ArgumentParser(description='Run an existing jail')
+parser.add_argument("jailname", help="The name of the jail to run")
+parser.add_argument("--maintenance", action="store_true", help="Mounts the root filesystem read-write")
+parser.add_argument("--veth", action="store_true", help="Uses a virtual ethernet link to host networking")
+parser.add_argument('--debug', action="store_true",
+                    help="Enable verbose output")
+args = parser.parse_args()
+
+jail = Jail(args.jailname)
+jail_dir = jail.loc
+root_dir = jail.fsroot
+home_dir = jail.homeroot
+user = getenv("USER", "user")
+
+bindflags = []
+
+features = jail.feature_list
+if features:
+    for feature in features:
+        if feature == "av":
+            bindflags += ["--bind", "/dev/video0"]
+        elif feature == "gpu":
+            bindflags += ["--bind", "/dev/dri"]
+        elif feature == "pulse":
+            bindflags += ["--bind", "/run/user/1000/pulse:/run/user/host/pulse"]
+        elif feature == "x11":
+            bindflags += ["--bind", "/tmp/.X11-unix:/tmp/.X11-unix"]
+
+if args.veth:
+    bindflags += ["--network-veth"]
+
+if args.maintenance:
+    mntflags = "-bD"
+else:
+    mntflags = "-xbD"
+    bindflags += ["--bind", "%s:/home/%s" % (home_dir, user)]
+
+if isdir(jail_dir):
+    cmd = ["sudo", "systemd-nspawn", 
+           mntflags, root_dir,
+           "--bind-ro", "%s/env_vars:/etc/environment" % jail_dir,
+           ] + bindflags
+    run_report_status(cmd, report=False, debug=args.debug, passthrough=True)
+else:
+    print("run: error: jail not found")
+
+
+# todo: this control needs abstract socket blocked
+#        elif feature == "x11":
+#            bindflags += ["--bind", "/tmp/.X11-unix:/tmp/.X11-unix"]
+

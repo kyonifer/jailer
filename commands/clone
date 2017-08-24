@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+
+from sys import argv
+from os.path import isfile, isdir
+from os import makedirs
+from subprocess import run
+from common import jailer_home, sdir, run_report_status, Jail
+import argparse
+
+parser = argparse.ArgumentParser(description='Create new jails.')
+parser.add_argument('os', 
+                    help='Which image distro/release you want. Current options are "zesty" or "arch"')
+parser.add_argument('--name',
+                    help='What to name the new jail. Defaults to "os"')
+parser.add_argument('--debug', action="store_true",
+                    help="Enable verbose output")
+args = parser.parse_args()
+
+
+release = args.os
+url = "http://archive.ubuntu.com/ubuntu/"
+if args.name:
+    name = args.name
+else:
+    name = args.os
+
+jail = Jail(name)
+
+if isdir(jail.fsroot):
+    print("==> Deleting existing jail '%s'" % name)
+    jail.delete_except_home(args.debug)
+
+makedirs(jail.fsroot)
+run_report_status(["sudo", "chown", "root:root", jail.fsroot], args.debug)
+
+if release=="arch":
+    print("==> Cloning via pacstrap... ", end="", flush=True)
+    command = ["sudo", "pacstrap", "-cd", jail.fsroot, "base"]
+else:
+    print("==> Cloning via debootstrap... ", end="", flush=True)
+    command = ["sudo", "debootstrap", "--arch=amd64", release, jail.fsroot, url]
+with open(jail.loc + "/command.txt", "w") as f:
+    f.write("clone|"+release)
+with open(jail.loc + "/os.txt", "w") as f:
+    f.write(args.os)
+with open(jail.loc + "/env_vars", "w") as f:
+    f.write("")
+
+run_report_status(command, args.debug, report=True)
+run_report_status(["mkdir", "-p", jail.loc + "/home_dir"], args.debug)
+
+
+#if args.home_skeleton:
+#    print("==> Copying provided home skeleton")
+#    run_report_status(["cp", "-R", args.home_skeleton, jaildir + "/home_dir"], args.debug)
+

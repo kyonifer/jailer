@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+
+from common import jailer_home, sdir, run_report_status, Jail
+import argparse
+from os.path import isdir
+from os import getenv
+from subprocess import run
+
+parser = argparse.ArgumentParser(description='Delete the home directory of a jail')
+parser.add_argument("jail", help="The jail to delete the home dir of")
+parser.add_argument('--debug', action="store_true",
+                    help="Enable verbose output")
+args = parser.parse_args()
+jail = Jail(args.jail)
+
+print("==> Cleaning home dir of jail")
+
+if(isdir(jail.loc)):
+    run_report_status(["rm", "-rf", jail.homeroot ], args.debug)
+    run_report_status(["mkdir", "-p", jail.homeroot ], args.debug)
+else:
+    print("rm: error: jail %s not found" % args.jail)
+

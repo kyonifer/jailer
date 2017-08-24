@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+
+from common import jailer_home, jail_list, Jail
+from subprocess import run, PIPE
+from os import listdir
+from os.path import isdir, isfile
+
+jaildirs = listdir("%s/jails" % jailer_home)
+
+all_names = []
+all_addons = []
+all_commands = []
+all_features = []
+for jail in jail_list:
+    if isdir(jail.fsroot):
+        name = jail.name
+        addons = jail.prep_line
+        command = jail.command_line
+        features = jail.feature_line
+        if addons == None:
+            addons = "<unprepared>"
+        if command == None:
+            command = "error: malformed jail at '%s'" % jdir
+        if features == None:
+            features = "none"
+        all_names.append(name)
+        all_addons.append(addons)
+        all_commands.append(command)
+        all_features.append(features)
+
+nameswidth = max([len(s) for s in all_names]+[4])
+addonswidth = max([len(s) for s in all_addons]+[6])
+commandswidth = max([len(s) for s in all_commands]+[8])
+featureswidth = max([len(s) for s in all_features]+[8])
+
+rowlen = nameswidth + addonswidth + commandswidth + featureswidth + 6
+fmtstring = "{0:"+str(nameswidth+2)+"}{1:"+str(addonswidth+2)+"}{2:"+str(commandswidth+2)+"}{3:5}\n"
+
+if rowlen > int(run(["tput", "cols"], stdout=PIPE).stdout.decode().strip()):
+    pager=True
+else:
+    pager=False
+
+outbuf = "="*rowlen + "\n"
+outbuf += (fmtstring).format("Name", "Addons", "Command", "Features")
+outbuf += "="*rowlen + "\n"
+
+for (name, addons, command, features) in zip(all_names, all_addons, all_commands, all_features):
+    outbuf += fmtstring.format(name, addons, command, features)
+
+
+if pager:
+    run(["echo '%s' | less -S" % outbuf], shell=True)
+else:
+    print(outbuf)
+
+found=0
+for jail in jail_list:
+    if not isdir(jail.fsroot) and \
+           isdir(jail.homeroot) and listdir(jail.homeroot):
+        if found == 0:
+            found = 1
+            print("== Abandoned non-empty homes:")
+        print(jail.name)
+
+

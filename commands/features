@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+
+from common import jailer_home, sdir, run_report_status, Jail
+from common import apply_script_via_nspawn, destdir, user, all_features
+import argparse
+from os.path import isdir, isfile, join
+from os import listdir, makedirs
+from subprocess import run
+
+parser = argparse.ArgumentParser(description='Add features (system access) to an existing jail. If run without [features] provided, it will instead list the installed/available features for this jail.')
+parser.add_argument("jail", help="The jail to prepare for usage")
+parser.add_argument('features',
+                    nargs='?',
+                    help='Features to enable, formatted as +feature1+feature2')
+parser.add_argument('--debug', action="store_true",
+                    help="Enable verbose output")
+args = parser.parse_args()
+
+jail = Jail(args.jail)
+
+if args.debug:
+    debugflag=["--debug"]
+else:
+    debugflag=[]
+
+if not isdir(jail.fsroot):
+    print("features: error: jail '%s' does not exist at %s" % (jail.name, jail.loc))
+    exit(1)
+
+old_feature_line = jail.feature_line
+
+if old_feature_line == None:
+    previous_features = []
+else:
+    previous_features = [ele for ele in old_feature_line.split("+") if ele != ""]
+    previous_features.sort()
+
+
+if not args.features:
+    print("Installed features:")
+    [print(f) for f in previous_features]
+    print("\nAvailable features:")
+    oldset = set(previous_features)
+    availableset = set(all_features)
+    [print(f) for f in sorted(availableset.difference(oldset))]
+    exit(0)
+
+requested_features = sorted([ele for ele in args.features.split("+") if ele != ""])
+
+for feature in requested_features:
+    if not feature in all_features:
+        print("features: error: feature '%s' not found" % feature)
+        exit(1)
+
+
+oldset = set(previous_features)
+newset = set(requested_features)
+combinedset = oldset.union(newset)
+out = "+".join(sorted(combinedset))
+if out:
+    if args.debug:
+        print("debug: writing new feature file: %s" % out)
+    jail.feature_line = out
+
+

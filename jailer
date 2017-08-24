@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+
+from sys import argv
+from os.path import dirname, realpath, isfile
+from subprocess import run
+
+sdir=dirname(realpath(argv[0]))
+
+def list_commands():
+    print("""
+    Available commands: 
+
+    jailer clone       Create new jail
+    jailer list        List current jails
+    jailer snapshot    Create a jail from another jail
+    jailer addons      Apply addon scripts to an existing jail
+    jailer features    Add features (system access) to an existing jail
+    jailer refresh     Delete then recreate a jail, replaying previous commands
+    jailer rm          Delete an existing jail
+    jailer rmhome      Delete (permanently!) the contents of a home dir
+    jailer run         Run an existing jail
+    jailer update      Apply system updates to an existing jail
+    jailer maintenance Run a maintenance shell (no home mnt, r/w access to root)
+
+    To see more information on how to use one of the sub-commands above,
+    run it with a -h flag, e.g. 'jailer base list -h'.
+
+    """)
+
+
+if len(argv) == 1:
+    list_commands()
+else:
+    cmd = "%s/commands/%s" % (sdir, argv[1])
+    if (isfile(cmd)):
+        run([cmd] + argv[2:])
+    else:
+        list_commands()
+
+

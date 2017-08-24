@@ -1,0 +1,115 @@
+#!/usr/bin/env python
+
+from common import jailer_home, sdir, run_report_status, Jail
+from common import apply_script_via_nspawn, destdir, user
+import argparse
+from os.path import isdir, isfile, join
+from os import listdir, makedirs
+from subprocess import run
+
+parser = argparse.ArgumentParser(description='Add addons to an existing jail. If run without [addons] provided, it will instead list the installed/available addons for this jail.')
+parser.add_argument("jail", help="The jail to prepare for usage")
+parser.add_argument('addons',
+                    nargs='?',
+                    help='Extra scripts to run, formatted as +script1+script2 (default setup script is always run first).')
+parser.add_argument('--debug', action="store_true",
+                    help="Enable verbose output")
+args = parser.parse_args()
+
+jail = Jail(args.jail)
+
+if args.debug:
+    debugflag=["--debug"]
+else:
+    debugflag=[]
+
+if not isdir(jail.fsroot):
+    print("addons: error: jail '%s' does not exist at %s" % (jail.name, jail.loc))
+    exit(1)
+
+scriptsdir = sdir + "/../scripts/init_scripts/" + jail.osname
+
+prep_dir = "%s/../scripts/init_scripts/%s" % (sdir, jail.osname)
+all_addons = [f for f in listdir(prep_dir) if isdir(join(prep_dir, f))]
+all_addons.sort()
+
+old_prep_line = jail.prep_line
+if old_prep_line=="all":
+    previous_addons = all_addons
+elif old_prep_line == None or old_prep_line == "default":
+    previous_addons = []
+else:
+    previous_addons = sorted([ele for ele in old_prep_line.split("+") if ele != ""])
+
+if args.addons==None:
+    print("== Installed addons: ==")
+    [print(a) for a in previous_addons]
+    print("== Available addons: ==")
+    oldset = set(previous_addons)
+    availableset = set(all_addons)
+    [print(f) for f in sorted(availableset.difference(oldset))]
+    exit(0)
+
+
+if args.addons=="all":
+    requested_addons = all_addons
+else:
+    requested_addons = sorted([ele for ele in args.addons.split("+") if ele != ""])
+
+for addon in requested_addons:
+    if not isdir("%s/%s" % (scriptsdir, addon)):
+        print("\naddons: error: addon '%s' not found for OS '%s'." % (addon, jail.osname))
+        exit(1)
+
+if requested_addons == [] and previous_addons == []:
+    jail.prep_line="default"
+else:
+    oldset = set(previous_addons)
+    newset = set(requested_addons)
+    combinedset = oldset.union(newset)
+    out = "+".join(sorted(combinedset))
+    if args.debug:
+        print("debug: writing new prep file: %s" % out)
+    jail.prep_line = out
+
+with open(jail.loc + "/env_vars", "w") as f:
+    f.write("PULSE_SERVER=unix:/run/user/host/pulse/native\n")
+    f.write("DISPLAY=:0\n")
+    f.write("#TERM=xterm-256color # fix issues with machinectl login\n")
+
+if old_prep_line == None:
+    print("==> Applying generic prep script for %s... " % jail.osname, end="", flush=True)
+
+    apply_script_via_nspawn(scriptsdir=scriptsdir,
+                            script="initscript.sh",
+                            destdir=destdir,
+                            os=jail.osname,
+                            jaildir=jail.loc,
+                            jailname=jail.name,
+                            asuser=user,
+                            debug=args.debug,
+                            newline_for_errors=True)
+
+# TODO: use this, probably need to rework to support multiple script dirs first
+def check_deps(addon_dir, addons):
+    pass
+
+if (args.addons):
+    for addon in requested_addons:
+        # TODO: deps checking
+        print("==> Applying add-on script %s/%s... " % (jail.osname, addon), end="", flush=True)
+
+        run_report_status(["sudo", "rm", "-rf", jail.fsroot + "/home/" + user], debug=args.debug)
+        run_report_status(["sudo", "mkdir", "-p", jail.fsroot + "/home/" + user], debug=args.debug)
+        run_report_status(["sudo", "chown", "%s:%s" % (user, user), jail.fsroot + "/home/" + user], debug=args.debug)
+
+        apply_script_via_nspawn(scriptsdir=scriptsdir,
+                        script=addon+"/initscript.sh",
+                        destdir=destdir,
+                        os=jail.osname,
+                        jaildir=jail.loc,
+                        jailname=jail.name,
+                        asuser=user,
+                        debug=args.debug,
+                        newline_for_errors=True)
+

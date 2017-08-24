@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+
+from common import run_report_status, copy_jail_except_home, Jail
+from os.path import isdir
+from os import getenv
+from subprocess import run
+import argparse
+
+parser = argparse.ArgumentParser(description='Creates new jails from existing jails.')
+parser.add_argument('source', 
+                    help='The source jail to make a copy of.')
+parser.add_argument('dest', 
+                    help='The name of the new jail being made.')
+parser.add_argument('--debug', action="store_true",
+                    help="Enable verbose output")
+args = parser.parse_args()
+
+from common import jailer_home, sdir
+
+srcjail = Jail(args.source)
+destjail = Jail(args.dest)
+
+cpfrom = srcjail.loc
+cpto = destjail.loc
+
+if not isdir(cpfrom):
+    print("snapshot: error: source jail '%s' doesn't exist at '%s'" 
+        % (args.source, cpfrom))
+    exit()
+if isdir(destjail.fsroot):
+    print("==> Deleting existing jail '%s'" % (args.dest))
+    destjail.delete_except_home(args.debug)
+
+print("==> Snapshotting '%s' to '%s'" % (srcjail.name, destjail.name))
+copy_jail_except_home(cpfrom, cpto, args.debug)
+
+if not isdir(destjail.homeroot):
+    run_report_status(["mkdir", "-p", destjail.homeroot])
+
+destjail.command_line = "snapshot|%s" % args.source
+
+#    echo "Example usage:"
+#    echo " jailer snapshot --base arch_clean --dest arch_prepared"
+#    echo " jailer snapshot --base zesty_clean --dest zesty_prepared --prep-scripts ubuntu"
+#    echo " jailer snapshot --base zesty_clean --dest zesty_prepared --prep-scripts ubuntu+wine+steam"
+
+

@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+
+from common import jailer_home, sdir, run_report_status, Jail
+import argparse
+from os.path import isdir
+from os import getenv
+from subprocess import run
+
+parser = argparse.ArgumentParser(description='Delete an existing jail')
+parser.add_argument("jail", help="The jail to delete")
+parser.add_argument('--debug', action="store_true",
+                    help="Enable verbose output")
+args = parser.parse_args()
+
+jail = Jail(args.jail)
+
+print("==> Deleting existing jail")
+
+if(isdir(jail.fsroot)):
+    jail.delete_except_home(args.debug)
+else:
+    print("rm: error: jail %s not found" % args.jail)
+

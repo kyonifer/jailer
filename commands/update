@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+from common import jailer_home, sdir, run_report_status, Jail
+from common import apply_script_via_nspawn, destdir, user
+import argparse
+from os.path import isdir, isfile, join
+from os import listdir, makedirs
+from subprocess import run
+
+parser = argparse.ArgumentParser(description='Run system updates on a jail')
+parser.add_argument("jail", help="The jail to run updates on")
+parser.add_argument('--debug', action="store_true",
+                    help="Enable verbose output")
+args = parser.parse_args()
+
+jail = Jail(args.jail)
+
+scriptsdir = sdir + "/../scripts/init_scripts/" + jail.osname
+
+if not isdir(jail.fsroot):
+    print("update: error: jail '%s' does not exist at %s" % (jail.name, jail.loc))
+    exit(1)
+
+print("==> Applying system updates")
+apply_script_via_nspawn(scriptsdir=scriptsdir,
+                script="updatescript.sh",
+                destdir=destdir,
+                os=jail.osname,
+                jaildir=jail.loc,
+                jailname=jail.name,
+                asuser=user,
+                debug=args.debug,
+                newline_for_errors=True)
+
+
+

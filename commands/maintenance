@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+
+
+from common import sdir
+import argparse
+from subprocess import run
+from sys import argv
+
+parser = argparse.ArgumentParser(description='Run a existing jail in maintenance mode')
+parser.add_argument("jailname", help="The name of the jail to run")
+parser.add_argument("--veth", action="store_true", help="Uses a virtual ethernet link to host networking")
+parser.add_argument('--debug', action="store_true",
+                    help="Enable verbose output")
+args = parser.parse_args()
+
+run([sdir+"/run"] + ["--maintenance"] + argv[1:])
+
+
