@@ -8,7 +8,8 @@ jailfiles = ["command.txt", "os.txt", "prep.txt", "root", "env_vars", "features.
 all_features = {"av":["--bind", "/dev/video0"], 
                 "gpu":["--bind", "/dev/dri"],
                 "pulse":["--bind", "/run/user/1000/pulse:/run/user/host/pulse"], 
-                "x11":["--bind", "/tmp/.X11-unix:/tmp/.X11-unix"]}
+                "x11":["--bind", "/tmp/.X11-unix:/tmp/.X11-unix"],
+                "usb":["--bind", "/dev/bus/usb"]}
 
 
 def run_report_status(cmd, debug=False, report=False, 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 
-from common import jailer_home, run_report_status, Jail
+from common import jailer_home, run_report_status, Jail, all_features
 import argparse
 from subprocess import run
 from os.path import isdir, isfile
@@ -26,14 +26,8 @@ bindflags = []
 features = jail.feature_list
 if features:
     for feature in features:
-        if feature == "av":
-            bindflags += ["--bind", "/dev/video0"]
-        elif feature == "gpu":
-            bindflags += ["--bind", "/dev/dri"]
-        elif feature == "pulse":
-            bindflags += ["--bind", "/run/user/1000/pulse:/run/user/host/pulse"]
-        elif feature == "x11":
-            bindflags += ["--bind", "/tmp/.X11-unix:/tmp/.X11-unix"]
+        if feature in all_features:
+            bindflags += all_features[feature]
 
 if args.veth:
     bindflags += ["--network-veth"]
