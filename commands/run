@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 
 from common import jailer_home, run_report_status, Jail, all_features
