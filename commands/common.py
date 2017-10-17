@@ -144,15 +144,17 @@ class Jail:
 
 jailer_home = getenv("JAILER_HOME", getenv("HOME","")+"/.jailer")
 jails_root = jailer_home + "/jails"
-sdir = dirname(realpath(argv[0]))
-destdir = "/initscripts" # Directory inside the chroot install scripts are copied to
-user = getenv("USER","user")
-jail_list = [Jail(j) for j in listdir(jails_root)]
 
 if not isdir(jailer_home):
     print("==> Performing first time initialization")
     makedirs(jailer_home+"/jails")
     makedirs(jailer_home+"/scripts")
+
+sdir = dirname(realpath(argv[0]))
+destdir = "/initscripts" # Directory inside the chroot install scripts are copied to
+user = getenv("USER","user")
+jail_list = [Jail(j) for j in listdir(jails_root)]
+
 
 
 for jail in jail_list:
