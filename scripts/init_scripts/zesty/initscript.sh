@@ -24,6 +24,9 @@ apt upgrade -y
 
 locale-gen en_US.UTF-8
 
+apt-get install apt-file -y
+apt-file update
+
 apt-get install software-properties-common -y
 apt-get install vim libvorbisfile3 curl -y
 if compgen -G "/root/extra*.sh" > /dev/null; then
